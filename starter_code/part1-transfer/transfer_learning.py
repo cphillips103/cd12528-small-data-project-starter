@@ -1,59 +1,100 @@
+#
 # Starter code for Part 1 of the Small Data Solutions Project
-# 
+#
 
-#Set up image data for train and test
-
+# Import pytorch libraries needed for working with data
 import torch
 import torch.nn as nn
+
+# Used to wrap an iterable around the Dataset
+from torch.utils.data import DataLoader
+# Stores the samples and their corresponding labels
+from torchvision import datasets
+
+from torchvision.transforms import ToTensor
+from torchvision import transforms 
+#from torchvision import 
+
+
+# For using GPU if available
 from torch import optim, cuda
 from torch.optim import lr_scheduler
-from torchvision import datasets, transforms 
+
+
 from TrainModel import train_model
 from TestModel import test_model
-from torchvision import models
-from torch.utils.data import DataLoader
+
+
 # Useful for examining network
-#from torchsummary import summary
+# from torchsummary import summary
+
 # Timing utility
 from timeit import default_timer as timer
+
+# Needed for handling dataframes
 import numpy as np
 import pandas as pd
+
+# Needed for file handling
 import os
 
 # Visualizations
 import matplotlib.pyplot as plt
-import seaborn as sns
-#%matplotlib inline
-
-import warnings
-warnings.filterwarnings('ignore', category=FutureWarning)
 
 # Image manipulations
 from PIL import Image
+
+
+# Ignore warnings
+import warnings
+warnings.filterwarnings('ignore', category=FutureWarning)
+
+
 
 # use this mean and sd from torchvision transform documentation
 mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
 
 
-
+#
 #<<<YOUR CODE HERE>>>
+#
+
+#
+# Directory variables for images
+# Loading from folder in same directory as the code
+# Image folder includes three folders (train,val,test)
+# Each subfolder contains various categories of images
+# with Beach, Desert, Forest images
+#
 DATA_DIR = "imagedata-50/"
 TRAIN_DATA_DIR = DATA_DIR+"train/"
 VALID_DATA_DIR = DATA_DIR+"val/"
 TEST_DATA_DIR = DATA_DIR+"test/"
-save_file_name = 'vgg16-transfer.pt'
-checkpoint_path = 'vgg16-transfer.pth'
+
+# Names for save files
+save_file_name = 'model_save.pth'
+checkpoint_path = 'model_checkpoint.pth'
+
+
+# Setup empty lists for names and train/valid/test splits
 categories=[]
 img_categories = []
 n_train = []
 n_valid = []
 n_test = []
-hs = []
-ws = []
+image_height = []
+image_width = []
 
-# Iterate through each category
+#num_epochs = 5
+
+#
+# Begining of Data Setup
+# Iterate through each category in image training directory
+#
+
 for d in os.listdir(TRAIN_DATA_DIR):
+    
     categories.append(d)
     
     # Number of each image
@@ -70,39 +111,48 @@ for d in os.listdir(TRAIN_DATA_DIR):
         img = Image.open(TRAIN_DATA_DIR + d + '/' + i)
         img_array = np.array(img)
         # Shape
-        hs.append(img_array.shape[0])
-        ws.append(img_array.shape[1])
+        image_height.append(img_array.shape[0])
+        image_width.append(img_array.shape[1])
 
 # Dataframe of categories
-cat_df = pd.DataFrame({'category': categories,
-                       'n_train': n_train,
-                       'n_valid': n_valid, 'n_test': n_test}).\
-    sort_values('category')
+#cat_df = pd.DataFrame({'category': categories,
+#                       'n_train': n_train,
+#                       'n_valid': n_valid, 'n_test': n_test}).\
+#    sort_values('category')
 
 # Dataframe of training images
 image_df = pd.DataFrame({
     'category': img_categories,
-    'height': hs,
-    'width': ws
+    'height': image_height,
+    'width': image_width
 })
 
-cat_df.sort_values('n_train', ascending=False, inplace=True)
-print(cat_df.head())
+#cat_df.sort_values('n_train', ascending=False, inplace=True)
+#print(cat_df.head())
 
 #distribution of image sizes
-img_dsc = image_df.groupby('category').describe()
-print(img_dsc.head())
+#img_dsc = image_df.groupby('category').describe()
+#print(img_dsc.head())
 
-#Set up DataLoaders (train, val, and test)
+# Here we define a batch size of 10
+# i.e. each element in the dataloader iterable will return a batch
+#  of 10 features and labels.
 batch_size = 10
 num_workers = 4
 
 # Whether to train on a gpu
-train_on_gpu = cuda.is_available()
-print(f'Train on gpu: {train_on_gpu}')
+device = (
+    "cuda"
+    if cuda.is_available()
+    else "cpu"
+    )
 
+print(f'Training will be on: {device}')
 
+#
 #<<<YOUR CODE HERE>>>
+#
+
 # Image transformations
 image_transforms = {
     # Train uses data augmentation
@@ -157,12 +207,15 @@ trainiter = iter(dataloaders['train'])
 features, labels = next(trainiter)
 features.shape, labels.shape
 
-n_classes = len(cat_df)
-print(f'There are {n_classes} different classes.')
+number_of_classes = len(data['train'].classes)
+print(f'There are {number_of_classes} different classes.')
 
 print(len(data['train'].classes))
-
-
+number_of_targets = len(data['train'].targets)
+print(f'There are {number_of_targets} different images.')
+#
+# End of Data Setup
+#
 
 #Set up Transforms (train, val, and test)
 # Using the VGG16 model for transfer learning 
@@ -170,7 +223,10 @@ print(len(data['train'].classes))
 # 2. Freeze layers so they won't all be trained again with our data
 # 3. Replace top layer classifier with a classifer for our 3 categories
 
+#
 #<<<YOUR CODE HERE>>>
+#
+
 model = models.vgg16(pretrained=True)
 model
 
@@ -183,7 +239,7 @@ n_inputs = model.classifier[6].in_features
 # Add on classifier
 model.classifier[6] = nn.Sequential(
     nn.Linear(n_inputs, 256), nn.ReLU(), nn.Dropout(0.4),
-    nn.Linear(256, n_classes), nn.LogSoftmax(dim=1))
+    nn.Linear(256, number_of_classes), nn.LogSoftmax(dim=1))
 
 model.classifier
 
@@ -207,14 +263,16 @@ def get_pretrained_model(model_name):
         # Add on classifier
         model.classifier[6] = nn.Sequential(
             nn.Linear(n_inputs, 256), nn.ReLU(), nn.Dropout(0.2),
-            nn.Linear(256, n_classes), nn.LogSoftmax(dim=1))
+            nn.Linear(256, number_of_classes), nn.LogSoftmax(dim=1))
 
     # Move to gpu and parallelize
-    if train_on_gpu:
+    if device:
         model = model.to('cuda')
 
     return model
 model = get_pretrained_model('vgg16')
+
+
 #summary(model, input_size=(3, 224, 224), batch_size=batch_size, device='cuda')
 
 print(model.classifier[6])
@@ -241,7 +299,9 @@ for p in optimizer.param_groups[0]['params']:
 # 3. optimizer 
 # 4. train_lr_scheduler 
 
+#
 #<<<YOUR CODE HERE>>>
+#
 
 def train(model,criterion,optimizer,train_loader,valid_loader,save_file_name,
           max_epochs_stop=3,n_epochs=20,print_every=1):
@@ -298,7 +358,7 @@ def train(model,criterion,optimizer,train_loader,valid_loader,save_file_name,
         # Training loop
         for ii, (data, target) in enumerate(train_loader):
             # Tensors to gpu
-            if train_on_gpu:
+            if device:
                 data, target = data.cuda(), target.cuda()
 
             # Clear gradients
@@ -328,6 +388,7 @@ def train(model,criterion,optimizer,train_loader,valid_loader,save_file_name,
             print(
                 f'Epoch: {epoch}\t{100 * (ii + 1) / len(train_loader):.2f}% complete. {timer() - start:.2f} seconds elapsed in epoch.',
                 end='\r')
+            print(f"Epoch {Epoch+1}\n-------------------------------")
 
         # After training loops ends, start validation
         else:
@@ -341,7 +402,7 @@ def train(model,criterion,optimizer,train_loader,valid_loader,save_file_name,
                 # Validation loop
                 for data, target in valid_loader:
                     # Tensors to gpu
-                    if train_on_gpu:
+                    if device:
                         data, target = data.cuda(), target.cuda()
 
                     # Forward pass
@@ -431,7 +492,8 @@ def train(model,criterion,optimizer,train_loader,valid_loader,save_file_name,
         history,
         columns=['train_loss', 'valid_loss', 'train_acc', 'valid_acc'])
     return model, history        
-        
+
+       
 model, history = train(
     model,
     criterion,
@@ -443,7 +505,9 @@ model, history = train(
     n_epochs=30,
     print_every=1)
 
-
+#
+# output graphs of results
+#
 plt.figure(figsize=(8, 6))
 for c in ['train_loss', 'valid_loss']:
     plt.plot(
@@ -554,7 +618,7 @@ def load_checkpoint(path):
     print(f'{total_trainable_params:,} total gradient parameters.')
 
     # Move to gpu
-    if train_on_gpu:
+    if device:
         model = model.to('cuda')
 
     # Model basics
