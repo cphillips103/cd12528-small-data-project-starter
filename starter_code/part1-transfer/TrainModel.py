@@ -4,7 +4,7 @@ import torch
 
 def train_model(model, criterion, optimizer, scheduler, train_loader, val_loader, num_epochs=20):
     #Get correct device
-    device = torch.device("cude:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     
     highest_accuracy = 0.0
