@@ -14,6 +14,7 @@
 import torch
 import torch.nn as nn
 
+
 # Used to wrap an iterable around the Dataset
 from torch.utils.data import DataLoader
 # Stores the samples and their corresponding labels
@@ -21,9 +22,10 @@ from torchvision import datasets
 
 # Import torchvision
 from torchvision.transforms import ToTensor
-from torchvision import transforms 
+#from torchvision import transforms
+from torchvision.transforms import v2
 import torchvision.models as models
-#from torchvision import 
+
 
 
 # For using GPU if available
@@ -84,31 +86,33 @@ batch_size = 10
 image_transforms = {
     # Train uses data augmentation
     'train':
-    transforms.Compose([
-        transforms.RandomResizedCrop(size=200, scale=(0.8, 1.0)),
-        transforms.RandomRotation(degrees=30),
-        transforms.ColorJitter(),
-        transforms.RandomHorizontalFlip(),
-        transforms.CenterCrop(size=64),  # Image net standards
-        transforms.ToTensor(),
-        transforms.Normalize(mean,
+    v2.Compose([
+        v2.RandomResizedCrop(size=(224, 224), antialias=True),
+        v2.RandomRotation(degrees=20),
+        v2.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.1, hue=0.1),
+        v2.RandomAffine(degrees=5, scale=(0.9, 1.1), shear=5),
+        v2.RandomGrayscale(p = 0.1),
+        v2.RandomHorizontalFlip(p= 0.5),
+        v2.CenterCrop(size = 64),  # Image net standards
+        v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]),
+        v2.Normalize(mean,
                              std)  # Imagenet standards
     ]),
     # Validation does not use augmentation
     'val':
-    transforms.Compose([
-        transforms.Resize(size=64),
-        transforms.CenterCrop(size=180),
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std)
+    v2.Compose([
+        v2.Resize(size = 256),
+        v2.CenterCrop(size = 224),
+        v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]),
+        v2.Normalize(mean, std)
     ]),
     # Test does not use augmentation
     'test':
-    transforms.Compose([
-        transforms.Resize(size=64),
-        transforms.CenterCrop(size=180),
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std)
+    v2.Compose([
+        v2.Resize(size = 256),
+        v2.CenterCrop(size = 224),
+        v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]),
+        v2.Normalize(mean, std)
     ]),
 }
 
@@ -160,7 +164,7 @@ print(f'There are {number_of_targets} different images.')
 def get_pretrained_model(model_name):
 
     if model_name == 'vgg16':
-        model = models.vgg16(pretrained=True)
+        model = models.vgg16(weights='DEFAULT')
 
         # Freeze early layers
         for param in model.parameters():
@@ -172,7 +176,7 @@ def get_pretrained_model(model_name):
             nn.Linear(number_of_inputs, 256), nn.ReLU(), nn.Dropout(0.4),
             nn.Linear(256, number_of_classes), nn.LogSoftmax(dim=1))
 
-    # Move to gpu and parallelize
+    # Move to gpu if available
     if device:
         model = model.to('cuda')
 
@@ -191,8 +195,6 @@ total_trainable_params = sum(
     p.numel() for p in model.parameters() if p.requires_grad)
 print(f'{total_trainable_params:,} training parameters.')    
 
-print(model.classifier[6])
-
 
 # Keep track of our mapping of class values to the indices
 model.class_to_idx = data['train'].class_to_idx
@@ -201,12 +203,10 @@ model.idx_to_class = {
     for class_, idx in model.class_to_idx.items()
 }
 
-print(f'Mapped classes: {list(model.idx_to_class.items())[:10]}')
-
 # Convert class dictionary to list for TestModel
 class_dict = {val: key for key, val in model.class_to_idx.items()}
 class_names = list(class_dict.values())
-print(class_names)
+print(f'Class names used in model: {", ".join(class_names)}')
 
 #
 # Train model with these hyperparameters
@@ -218,7 +218,7 @@ print(class_names)
 
 num_epochs=30
 criterion = nn.NLLLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+optimizer = optim.SGD(model.parameters(), lr=0.001)
 
 # look at the parameters (weights) that will be updated by the optimizer during training.
 for p in optimizer.param_groups[0]['params']:
@@ -229,9 +229,8 @@ train_loader = dataloaders['train']
 val_loader = dataloaders['val']
 test_loader = dataloaders['test']
 
-train_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
-
-
+lam = lambda epoch: 0.85 ** epoch
+train_lr_scheduler = torch.optim.lr_scheduler.MultiplicativeLR(optimizer, lr_lambda=lam)
 
 
 # When you have all the parameters in place, uncomment these to use the functions imported above

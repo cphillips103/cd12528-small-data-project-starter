@@ -1,4 +1,5 @@
 #Create model training 
+import matplotlib.pyplot as plt
 import copy
 import torch
 
