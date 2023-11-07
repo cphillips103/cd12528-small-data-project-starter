@@ -51,10 +51,6 @@ std = [0.229, 0.224, 0.225]
 
 
 #
-#<<<YOUR CODE HERE>>>
-#
-
-#
 # Directory variables for images
 # Loading from folder in same directory as the code
 # Image folder includes three folders (train,val,test)
@@ -77,10 +73,6 @@ TEST_DATA_DIR = DATA_DIR+"test/"
 # of 10 features and labels.
 batch_size = 10
 
-
-#
-#<<<YOUR CODE HERE>>>
-#
 
 # Image transformations
 image_transforms = {
@@ -116,7 +108,7 @@ image_transforms = {
     ]),
 }
 
-#hint, create a variable that contains the class_names. You can get them from the ImageFolder
+# Create a variable that contains the class_names. You can get them from the ImageFolder
 # Datasets from each folder
 data = {
     'train':
@@ -154,12 +146,6 @@ print(f'There are {number_of_targets} different images.')
 # 1. Get trained model weights
 # 2. Freeze layers so they won't all be trained again with our data
 # 3. Replace top layer classifier with a classifer for our 3 categories
-
-#
-#<<<YOUR CODE HERE>>>
-#
-
-
 
 def get_pretrained_model(model_name):
 
@@ -216,7 +202,7 @@ print(f'Class names used in model: {", ".join(class_names)}')
 # 4. train_lr_scheduler 
 #
 
-num_epochs=30
+num_epochs=200
 criterion = nn.NLLLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.001)
 

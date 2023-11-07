@@ -26,17 +26,18 @@ def load_xy(df):
     return x_df, y_df
 
 def run_test(x_df, y_df):
-    mlp = MLPClassifier(max_iter=100)
+    mlp = MLPClassifier(max_iter=1200)
     ## Feel free to play with these parameters if you want
+    #'hidden_layer_sizes': [(5,10), (12), (2,5,10, 15)]
     parameter_space = {
-        'hidden_layer_sizes': [(5,10), (12), (2,5,10, 15)],
+        'hidden_layer_sizes': [(150,100,50), (120,80,40), (100,50,30)],
         'activation': ['tanh', 'relu', 'logistic'],
         'solver': ['sgd', 'adam'],
         'alpha': [0.0001, 0.05, 0.01],
         'learning_rate': ['constant','adaptive'],
     }
 
-    clf = GridSearchCV(mlp, parameter_space, n_jobs=-1, cv=3)
+    clf = GridSearchCV(mlp, parameter_space, n_jobs=-1, cv=5)
     clf.fit(x_df, y_df)
 
     print('Best parameters found:\n', clf.best_params_)

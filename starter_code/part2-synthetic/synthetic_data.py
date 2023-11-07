@@ -123,21 +123,171 @@ def generate_fake(mu, logvar, no_samples, scaler, model):
     fake_data = scaler.inverse_transform(pred)
     return fake_data
 
+def get_device():
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    return device
+
 # When you have all the code in place to generate synthetic data, uncomment the code below to run the model and the tests. 
 def main():
     # Get a device and set up data paths. You need paths for the original data, the data with just loan status = 1 and the new augmented dataset.
 
-    # Split the data out with loan status = 1
+    device = get_device()
+    BATCH_SIZE = 1024
+    # Loading original loan data
+    original_data = pd.read_csv('data/loan_continuous.csv')
+    # Get basic metrics
+    print('Original Imbalanced Data Set Metrics.')
+    print(original_data.shape)
+    print(original_data.head())
+    print(original_data.describe())
+    
+    # Save column labels to list for later
+    cols = original_data.columns.values.tolist()
+    print('Data Set Columns Names.')
+    print(cols)
+    
+    # Make copy of the dataframe
+    my_data = original_data.copy()
 
+    # Select only loans with loan status = 1
+    my_data = original_data[original_data['Loan Status'] == 1]
+    print('Subset of Data with Loan Status = 1.')
+    print(my_data)
+    print(my_data.shape)
+    
+    # Get basic metrics for subset data
+    print('Subset Data Set Metrics.')
+    print(my_data.shape)
+    print(my_data.head())
+    print(my_data.describe())
+    print(my_data.isnull().sum())
+    
+    # Save new dataframe with loan status = 1 without index
+    my_data.to_csv('data/loan_Status_one.csv', index=False)
+    
+    # Prepare data for pytorch
+    DATA_PATH_SATUS_ONE = 'data/loan_Status_one.csv'
+    DATA_PATH_CONTINUOUS = 'data/loan_continuous.csv'
+
+    
     # Create DataLoaders for training and validation 
+    training_data_set=DataBuilder(DATA_PATH_SATUS_ONE, train=True)
+    test_data_set=DataBuilder(DATA_PATH_CONTINUOUS, train=False)
+    training_loader=DataLoader(dataset=training_data_set,batch_size=BATCH_SIZE)
+    test_loader=DataLoader(dataset=test_data_set,batch_size=BATCH_SIZE)
 
+    print('Training and Test Loader Data.')
+    print(training_loader.dataset.x.shape, test_loader.dataset.x.shape)
+    print(training_loader.dataset.x)
+    
+    print('TestModel of original Imblanced Data Set.')
+    #print("Press any key to continue...")
+    print('Running TestModel of original Imbalanced Data Set.')
+    test_model(DATA_PATH_CONTINUOUS)
+    
+    print("Train and validate subset data Loan Status = 1")
+    #print("Press any key to continue...")
+    print("Training and validating subset data Loan Status = 1")    
     # Train and validate the model 
+    
+    num_epoch = 2000
+    LR = 0.001         # learning rate
 
-    #scaler = trainloader.dataset.standardizer
-    #fake_data = generate_fake(mu, logvar, 50000, scaler, model)
+    # Initiate model
+    D_in = training_loader.dataset.x.shape[1]
+    H = 50
+    H2 = 12
+    model = Autoencoder(D_in, H, H2).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+    
 
+    # Initiate Customloss
+    loss_mse = CustomLoss()
+    
+    training_losses = []
+    test_losses = []
+
+    def train(epoch):
+        model.train()
+        train_loss = 0
+        for batch_idx, data in enumerate(training_loader):
+            data = data.to(device)
+            for param in model.parameters():
+                param.grad = None
+            #optimizer.zero_grad()
+            recon_batch, mu, logvar = model(data)
+            loss = loss_mse(recon_batch, data, mu, logvar)
+            loss.backward()
+            train_loss += loss.item()
+            optimizer.step()
+        if epoch % 5 == 0:        
+            print('====> Epoch: {} Average training loss: {:.4f}'.format(
+                epoch, train_loss / len(training_loader.dataset)))
+            training_losses.append(train_loss / len(training_loader.dataset))
+
+    def test(epoch):
+        with torch.no_grad():
+            test_loss = 0
+            for batch_idx, data in enumerate(test_loader):
+                data = data.to(device)
+                #optimizer.zero_grad()
+                for param in model.parameters():
+                    param.grad = None
+                recon_batch, mu, logvar = model(data)
+                loss = loss_mse(recon_batch, data, mu, logvar)
+                test_loss += loss.item()
+                if epoch % 5 == 0:        
+                    print('====> Epoch: {} Average test loss: {:.4f}'.format(
+                        epoch, test_loss / len(test_loader.dataset)))
+                test_losses.append(test_loss / len(test_loader.dataset))
+    for epoch in range(1, num_epoch + 1):
+        train(num_epoch)
+        test(num_epoch)
+   
+   
+    with torch.no_grad():
+        for batch_idx, data in enumerate(test_loader):
+            data = data.to(device)
+            optimizer.zero_grad()
+            recon_batch, mu, logvar = model(data)
+    print('Compare original and training data.')
+    #print("Press any key to continue...")
+    scaler = training_loader.dataset.standardizer
+    recon_row = scaler.inverse_transform(recon_batch[0].cpu().numpy().reshape(1, -1))
+    real_row = scaler.inverse_transform(test_loader.dataset.x[0].cpu().numpy().reshape(1, -1))
+    df = pd.DataFrame(np.stack((recon_row[0], real_row[0])), columns = cols)
+    print('Print row of original and training data.')
+    print(df.head())
+
+    print('Create augmented data set.')
+    #print("Press any key to continue...")
+    print('Generating augmented data.')
+    data_fake = generate_fake(mu, logvar, 50000, scaler, model)
+    data_fake = pd.DataFrame(data_fake)
+    data_fake.columns = cols
+    data_fake['Loan Status'] = np.round(data_fake['Loan Status']).astype(int)
+    data_fake['Loan Status'] = np.where(data_fake['Loan Status']<1, 1, data_fake['Loan Status'])
+   
+    print('Print augmented data set.')
+    print(data_fake.head())
+    print(data_fake['Loan Status'].mean())
+    print(data_fake.describe())
+
+    #print("Press any key to continue to combine data sets...")
     # Combine the new data with original dataset
+    frames = [original_data, data_fake]
+    combined_data = pd.concat(frames)
+    print('Combined original and augmented data.')
+    print(combined_data.head())
+    print(original_data.groupby('Loan Status').mean())
+    print(combined_data.groupby('Loan Status').mean())
+   
+    # Save new dataframe without index
+    combined_data.to_csv('data/loan_continuous_expanded.csv', index=False)
 
+    print('TestModel on new combined data.')
+    # print("Press any key to continue...")
+    print('Running TestModel on new combined data.')
     DATA_PATH = 'data/loan_continuous_expanded.csv'
     test_model(DATA_PATH)
 
