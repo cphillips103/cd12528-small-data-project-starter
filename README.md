@@ -22,13 +22,13 @@ Training with 30 Epochs:
 
 Highest Accuracy 0.9333
 
-![Base Results](https://github.com/[username]/[reponame]/blob/[branch]/travel_plan_30_epochs.jpg?raw=true)
+![Base Results](https://github.com/cphillips103/cd12528-small-data-project-starter/blob/main/images/travel_plan_30_epochs.png)
 
 Training with 200 Epochs:
 
 Highest Accuracy 0.9333
 
-![Augmented Results](https://github.com/[username]/[reponame]/blob/[branch]/travel_plan_200_epochs.jpg?raw=true)
+![Augmented Results](https://github.com/cphillips103/cd12528-small-data-project-starter/blob/main/images/travel_plan_200_epochs.png)
 
 **Part 2: Loan Funding Prediction Problem**
 A loan company has a fairly large dataset that they want to use to train a model that predicts whether or not a loan should be funded.  The problem they face is the dataset they are using has a large class imbalance... they don't have enough examples of loans that were denied. The company wants to augment the "denied loan" class of data in order to train a model that performs better.  
@@ -43,14 +43,14 @@ Before Augmented Data:
 
 Macro Accuracy 0.48
 
-![Base Results](https://github.com/[username]/[reponame]/blob/[branch]/loan_status_base.jpg?raw=true)
+![Base Results](https://github.com/cphillips103/cd12528-small-data-project-starter/blob/main/images/loan_status_base.png)
 
 
 After Augmented Data:
 
 Macro Accuracy 0.9333
 
-![Augmented Results](https://github.com/[username]/[reponame]/blob/[branch]/loan_status_augmented.jpg?raw=true)
+![Augmented Results](https://github.com/cphillips103/cd12528-small-data-project-starter/blob/main/images/loan_status_augmented.png)
 
 ## Getting Started
 
