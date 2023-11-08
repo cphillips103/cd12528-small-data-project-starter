@@ -1,4 +1,7 @@
-# Small Data Solutions
+## Small Data Solutions
+## Christopher Phillips
+## November 8, 2023
+## For Udacity Small Data Program
 
 **Part 1: Travel Planner Problem**
 A travel planning company asks their customers to share pictures of past vacations / holidays so their staff can get a sense of what kind of trips they enjoy. The company offers three basic categories of trips:
@@ -10,10 +13,44 @@ As part of a new online trip planning software, the company is creating an AI bo
 
 You will use the starter code and use transfer learning to build a model to categorize images with at least a 90% accuracy rate. 
 
+Credit: Udacity.com
+
+
+**Conclusions:**
+
+Training with 30 Epochs:
+
+Highest Accuracy 0.9333
+
+![Base Results](https://github.com/[username]/[reponame]/blob/[branch]/travel_plan_30_epochs.jpg?raw=true)
+
+Training with 200 Epochs:
+
+Highest Accuracy 0.9333
+
+![Augmented Results](https://github.com/[username]/[reponame]/blob/[branch]/travel_plan_200_epochs.jpg?raw=true)
+
 **Part 2: Loan Funding Prediction Problem**
 A loan company has a fairly large dataset that they want to use to train a model that predicts whether or not a loan should be funded.  The problem they face is the dataset they are using has a large class imbalance... they don't have enough examples of loans that were denied. The company wants to augment the "denied loan" class of data in order to train a model that performs better.  
 
 You will use the starter code and use a Variational Autoencoder to generate an additional set of synthetic data for just the denied loan category of data. You will then augment the original dataset with the additional synthetic data and test to see if there were improvements.  
+
+Credit: Udacity.com
+
+**Conclusions:**
+
+Before Augmented Data:
+
+Macro Accuracy 0.48
+
+![Base Results](https://github.com/[username]/[reponame]/blob/[branch]/loan_status_base.jpg?raw=true)
+
+
+After Augmented Data:
+
+Macro Accuracy 0.9333
+
+![Augmented Results](https://github.com/[username]/[reponame]/blob/[branch]/loan_status_augmented.jpg?raw=true)
 
 ## Getting Started
 

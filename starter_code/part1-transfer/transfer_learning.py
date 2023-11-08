@@ -147,28 +147,26 @@ print(f'There are {number_of_targets} different images.')
 # 2. Freeze layers so they won't all be trained again with our data
 # 3. Replace top layer classifier with a classifer for our 3 categories
 
-def get_pretrained_model(model_name):
+# Process pre-trained model
+model = models.vgg16(weights='DEFAULT')
 
-    if model_name == 'vgg16':
-        model = models.vgg16(weights='DEFAULT')
+# Freeze early layers
+for param in model.parameters():
+    param.requires_grad = False
+    
+# Add custom clasifier
+number_of_inputs = model.classifier[6].in_features
 
-        # Freeze early layers
-        for param in model.parameters():
-            param.requires_grad = False
-        number_of_inputs = model.classifier[6].in_features
+model.classifier[6] = nn.Sequential(
+    nn.Linear(number_of_inputs, 256), nn.ReLU(), nn.Dropout(0.4),
+    nn.Linear(256, number_of_classes), nn.LogSoftmax(dim=1))
 
-        # Add on classifier
-        model.classifier[6] = nn.Sequential(
-            nn.Linear(number_of_inputs, 256), nn.ReLU(), nn.Dropout(0.4),
-            nn.Linear(256, number_of_classes), nn.LogSoftmax(dim=1))
+# Move to gpu if available
+if device:
+    model = model.to('cuda')
 
-    # Move to gpu if available
-    if device:
-        model = model.to('cuda')
 
-    return model
 
-model = get_pretrained_model('vgg16')
 
 #
 # Print Parameters
@@ -202,7 +200,7 @@ print(f'Class names used in model: {", ".join(class_names)}')
 # 4. train_lr_scheduler 
 #
 
-num_epochs=200
+num_epochs=30
 criterion = nn.NLLLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.001)
 
